@@ -2,17 +2,28 @@
 	import { json } from "@sveltejs/kit";
 	import { onMount } from "svelte";
 
+    let id: string = "";
+
+    enum WebSocketClientEvent {
+        JoinRoom,
+        StartGame,
+        DealerAcceptCards,
+        DealerRejectCards,
+        PlayerSwapAll,
+        PlayerSwapCard,
+        PlayerSkipTurn,
+        PlayerLockTurn,
+    }
+
     let responses: string[] = [];
     $: responses = [...responses];
-    let id = "";
-
     onMount(async() => {
 
     });
 
     let ws : WebSocket | undefined;
-    const startConnection = (roomId: string) => {
-        ws = new WebSocket(`ws://localhost:5129/ws/rooms/${roomId}`);
+    const startConnection = () => {
+        ws = new WebSocket(`ws://localhost:5129/ws/rooms/${id}`);
         ws.onclose = () => {
             responses.push("Connection closed");
             responses = responses;   
@@ -30,52 +41,45 @@
     }
 
     const createRoom = async() => {
-        const response = await fetch("http://localhost:5129/api/rooms", {
+        const response = await fetch("http://localhost:5129/api/rooms/", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: new Headers({"content-type": "application/json"}),
             body: JSON.stringify({
-                "Name": "Very cool room",
-                "Capacity": 2,
-                "IsPublic": true,
+                name: "verycoolname",
+                isPublic: true,
+                capacity: 2
             })
         });
 
-        let { id } = await response.json();
-
-        responses.push(`Created room[${id}]`)
-
-        startConnection(id)
+        id = await response.text();
     }
 
-    let name: string;
-
+    let name: string = "";
 </script>
 
 <div>
-    <input bind:value={id}>
-    <button on:click={() => startConnection(id)}>Connect</button>
+    <button on:click={createRoom} >Create Room</button>
 </div>
 
 <div>
-    <button on:click={() => createRoom()} >Create</button>
+    <input bind:value={id}>
+    <button on:click={startConnection} >Connect to Room</button>
 </div>
 
 <div>
     <input bind:value={name}>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 0,
+            "event": WebSocketClientEvent.JoinRoom,
             "name": name
         }))
-    }}>Join as {name}</button>
+    }} >Join Room</button>
 </div>
 
 <div>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 1,
+            "event": WebSocketClientEvent.StartGame,
         }))
     }}>Start game</button>
 </div>
@@ -83,12 +87,12 @@
 <div>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 2,
+            "event": WebSocketClientEvent.DealerAcceptCards,
         }))
     }}>Accept cards</button>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 3,
+            "event": WebSocketClientEvent.DealerRejectCards,
         }))
     }}>Reject cards</button>
 </div>
@@ -96,17 +100,22 @@
 <div>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 4,
+            "event": WebSocketClientEvent.PlayerSwapCard,
         }))
     }}>Swap cards</button>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 5,
+            "event": WebSocketClientEvent.PlayerSwapAll,
+        }))
+    }}>Swap all</button>
+    <button on:click={() => {
+        ws?.send(JSON.stringify({
+            "event": WebSocketClientEvent.PlayerSkipTurn,
         }))
     }}>Skip turn</button>
     <button on:click={() => {
         ws?.send(JSON.stringify({
-            "event": 6,
+            "event": WebSocketClientEvent.PlayerLockTurn,
         }))
     }}>Lock turn</button>
 </div>
