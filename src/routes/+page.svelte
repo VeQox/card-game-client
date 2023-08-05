@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 
     let id: string = "";
+    let clientId: string = "";
 
     enum WebSocketClientEvent {
         JoinRoom,
@@ -24,6 +25,15 @@
     let ws : WebSocket | undefined;
     const startConnection = () => {
         ws = new WebSocket(`ws://localhost:5129/ws/rooms/${id}`);
+        condigureWebsocket(ws);
+    }
+
+    const reconnect = () => {
+        ws = new WebSocket(`ws://localhost:5129/ws/rooms/${id}/reconnect/${clientId}`)
+        condigureWebsocket(ws)
+    }
+
+    const condigureWebsocket = (ws: WebSocket) => {
         ws.onclose = () => {
             responses.push("Connection closed");
             responses = responses;   
@@ -74,6 +84,12 @@
             "name": name
         }))
     }} >Join Room</button>
+</div>
+
+<div>
+    <input bind:value={id}>
+    <input bind:value={clientId}>
+    <button on:click={reconnect} >Reconnect</button>
 </div>
 
 <div>
