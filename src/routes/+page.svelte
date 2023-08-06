@@ -1,143 +1,28 @@
 <script lang="ts">
-	import { json } from "@sveltejs/kit";
+	import { focusTrap } from "@skeletonlabs/skeleton";
 	import { onMount } from "svelte";
 
-    let id: string = "";
-    let clientId: string = "";
+    let username: string = "";
+    $: username = username.trim();
 
-    enum WebSocketClientEvent {
-        JoinRoom,
-        StartGame,
-        DealerAcceptCards,
-        DealerRejectCards,
-        PlayerSwapAll,
-        PlayerSwapCard,
-        PlayerSkipTurn,
-        PlayerLockTurn,
+    onMount(() => {
+        username = localStorage.getItem("username") ?? "";
+    })
+
+    const onSubmit = () => {
+        localStorage.setItem("username", username);
+        location.href = "/rooms";
     }
-
-    let responses: string[] = [];
-    $: responses = [...responses];
-    onMount(async() => {
-
-    });
-
-    let ws : WebSocket | undefined;
-    const startConnection = () => {
-        ws = new WebSocket(`ws://localhost:5129/ws/rooms/${id}`);
-        condigureWebsocket(ws);
-    }
-
-    const reconnect = () => {
-        ws = new WebSocket(`ws://localhost:5129/ws/rooms/${id}/reconnect/${clientId}`)
-        condigureWebsocket(ws)
-    }
-
-    const condigureWebsocket = (ws: WebSocket) => {
-        ws.onclose = () => {
-            responses.push("Connection closed");
-            responses = responses;   
-        }
-
-        ws.onmessage = (e) => {
-            responses.push(e.data)
-            responses = responses;  
-        }
-
-        ws.onopen = () => {
-            responses.push("Connection opened");
-            responses = responses;
-        }
-    }
-
-    const createRoom = async() => {
-        const response = await fetch("http://localhost:5129/api/rooms/", {
-            method: "POST",
-            headers: new Headers({"content-type": "application/json"}),
-            body: JSON.stringify({
-                name: "verycoolname",
-                isPublic: true,
-                capacity: 2
-            })
-        });
-
-        id = await response.text();
-    }
-
-    let name: string = "";
 </script>
 
-<div>
-    <button on:click={createRoom} >Create Room</button>
-</div>
 
-<div>
-    <input bind:value={id}>
-    <button on:click={startConnection} >Connect to Room</button>
-</div>
 
-<div>
-    <input bind:value={name}>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.JoinRoom,
-            "name": name
-        }))
-    }} >Join Room</button>
-</div>
-
-<div>
-    <input bind:value={id}>
-    <input bind:value={clientId}>
-    <button on:click={reconnect} >Reconnect</button>
-</div>
-
-<div>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.StartGame,
-        }))
-    }}>Start game</button>
-</div>
-
-<div>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.DealerAcceptCards,
-        }))
-    }}>Accept cards</button>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.DealerRejectCards,
-        }))
-    }}>Reject cards</button>
-</div>
-
-<div>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.PlayerSwapCard,
-        }))
-    }}>Swap cards</button>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.PlayerSwapAll,
-        }))
-    }}>Swap all</button>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.PlayerSkipTurn,
-        }))
-    }}>Skip turn</button>
-    <button on:click={() => {
-        ws?.send(JSON.stringify({
-            "event": WebSocketClientEvent.PlayerLockTurn,
-        }))
-    }}>Lock turn</button>
-</div>
-
-<div>
-    {#each responses as response}
-        <p>{response}</p>
-    {/each}
+<div class="w-full h-full flex justify-center items-center flex-col">
+    <h3 class="h3">Welcome to</h3>
+    <h1 class="h1">Online Card Games</h1>
+    <form on:submit|preventDefault={onSubmit} use:focusTrap={true} class="w-1/2 mt-10 space-y-1">
+        <h4 class="h4 -my-1">Enter your username</h4>
+        <input bind:value={username} class="input outline-none p-1" placeholder="chad123">
+        <button type="submit" class="btn variant-filled-primary btn-sm float-right">Play</button>
+    </form>
 </div>
