@@ -1,18 +1,42 @@
 <script lang="ts">
+    import type { User } from '$lib/types/user'
+	import type { Writable } from 'svelte/store';
 	import AccountIcon from './../../lib/components/accountIcon.svelte';
 	import OnlineCardGamesLogo from './../../lib/components/onlineCardGamesLogo.svelte';
 	import { AppBar, SlideToggle } from "@skeletonlabs/skeleton";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
+    import { user } from '$lib/stores/userStore';
 
-    let username: string = "";
-    $: username = username.trim();
+    let isPublic: boolean = true;
+    let room: string | undefined;
+    let capacity: string | undefined;
+    $: sliderLabel = isPublic ? "Public" : "Private";   
 
-    let isPrivate: boolean = true;
-    $: sliderLabel = isPrivate ? "Private" : "Public";
+    const createRoom = async() => {
+        const response = await fetch("http://localhost:5129/api/rooms/", {
+            method: "POST",
+            headers: new Headers({"content-type": "application/json"}),
+            body: JSON.stringify({
+                name: room ?? `{$user.name}'s room`,
+                isPublic: isPublic,
+                capacity: isNaN(Number(capacity)) ? 2 : Number(capacity)
+            })
+        });
 
-    onMount(() => {
-        username = localStorage.getItem("username") ?? "";
-    })
+        if(response.status == 201){
+            let { id } = await response.json();
+            location.href = `/rooms/${id}`;
+        }
+    }
+
+
+    let roomCode: string = "";
+    const joinRoom = async() => {
+        const response = await fetch(`http://localhost:5129/api/rooms/${roomCode}`);
+        if(response.status === 200){
+            location.href = `/rooms/${roomCode}`;
+        }
+    }
 </script>
 
 
@@ -31,9 +55,7 @@
             <div class="input-group-shim">
                 <AccountIcon/>
             </div>
-            <input bind:value={username} on:change={() => {
-                localStorage.setItem("username", username);
-            }} type="search" placeholder="username" class="outline-none p-1" />
+            <input bind:value={$user.name} type="search" placeholder="username" class="outline-none p-1" />
         </div>
     </svelte:fragment>
 </AppBar>
@@ -47,10 +69,10 @@
             </header>
             <section class="p-4">
                 <p>Enter a room code</p>
-                <input type="search" placeholder="abcd" class="input outline-none p-1" />
+                <input type="search" placeholder="abcd" bind:value={roomCode} class="input outline-none p-1" />
             </section>
             <footer class="card-footer flex justify-center">
-                <button class="btn variant-filled-primary btn-md">Join</button>
+                <button class="btn variant-filled-primary btn-md" on:click={joinRoom}>Join</button>
             </footer>
         </div>
         <div class="card card-hover">
@@ -60,19 +82,19 @@
             <section class="p-4 space-y-2">
                 <div>
                     <p>Enter a room name</p>
-                    <input type="search" placeholder="{username}'s room" class="input outline-none p-1" />
+                    <input type="search" placeholder="{$user.name}'s room" bind:value={room} class="input outline-none p-1" />
                 </div>
                 <div>
                     <p>Enter room capacity</p>
-                    <input type="search" placeholder="2" class="input outline-none p-1" />
+                    <input type="search" placeholder="2" bind:value={capacity} class="input outline-none p-1" />
                 </div>
                 <SlideToggle 
                     name="slider-label" 
-                    bind:checked={isPrivate}
+                    bind:checked={isPublic}
                     active="bg-primary-500">{sliderLabel}</SlideToggle>
             </section>
             <footer class="card-footer flex justify-center">
-                <button class="btn variant-filled-primary btn-md">Create Room</button>
+                <button class="btn variant-filled-primary btn-md" on:click={createRoom}>Create Room</button>
             </footer>
         </div> 
         <div class="card card-hover">
